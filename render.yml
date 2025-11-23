@@ -1,7 +1,12 @@
 services:
   - type: web
     name: hr-mcp-server
-    env: python
+    env: docker
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    docker:
+      dockerfile: Dockerfile
+    envVars:
+      - key: MCP_SERVER_NAME
+        value: hr-mcp-server
+      - key: MCP_SERVER_VERSION
+        value: 1.0.0

@@ -9,7 +9,6 @@ from datetime import datetime
 import uvicorn
 import os
 
-# Import your existing modules
 from .hr_services import hr_db
 
 app = FastAPI(title="HR MCP SSE Server")
@@ -31,7 +30,7 @@ class MCPSseServer:
         
         async def mcp_event_stream():
             try:
-                # Initialization response (MCP protocol format)
+                # Initialization response
                 init_message = {
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -98,7 +97,7 @@ class MCPSseServer:
                 }
                 yield f"data: {json.dumps(tools_message)}\n\n"
                 
-                # Keep connection alive with heartbeats
+                # Keep connection alive
                 while True:
                     await asyncio.sleep(30)
                     heartbeat = {
@@ -139,23 +138,6 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy", "mcp_ready": True}
-
-# Add a simple tool testing endpoint
-@app.post("/test-tool")
-async def test_tool(request: Request):
-    data = await request.json()
-    tool_name = data.get("name")
-    arguments = data.get("arguments", {})
-    
-    if tool_name == "get_employee_details":
-        employee_id = arguments.get("employee_id")
-        employee = hr_db.get_employee(employee_id)
-        if employee:
-            return {"result": f"Employee: {employee.name}, Dept: {employee.department}"}
-        else:
-            return {"result": f"Employee {employee_id} not found"}
-    
-    return {"result": f"Tool {tool_name} not found"}
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))

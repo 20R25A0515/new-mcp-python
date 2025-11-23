@@ -1,4 +1,4 @@
-# main.py
+# main.py - Entry point
 import uvicorn
 import os
 

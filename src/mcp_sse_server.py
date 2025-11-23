@@ -8,8 +8,16 @@ import uuid
 from datetime import datetime
 import uvicorn
 import os
+import sys
 
-from .hr_services import hr_db
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from src.hr_services import hr_db
+except ImportError:
+    # Fallback for direct execution
+    from hr_services import hr_db
 
 app = FastAPI(title="HR MCP SSE Server")
 
@@ -69,28 +77,6 @@ class MCPSseServer:
                                 "name": "get_all_employees",
                                 "description": "Get all employees",
                                 "inputSchema": {"type": "object", "properties": {}}
-                            },
-                            {
-                                "name": "search_employees", 
-                                "description": "Search employees by department or name",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "department": {"type": "string"},
-                                        "name": {"type": "string"}
-                                    }
-                                }
-                            },
-                            {
-                                "name": "get_employee_leave_requests",
-                                "description": "Get employee leave requests",
-                                "inputSchema": {
-                                    "type": "object", 
-                                    "properties": {
-                                        "employee_id": {"type": "string"}
-                                    },
-                                    "required": ["employee_id"]
-                                }
                             }
                         ]
                     }

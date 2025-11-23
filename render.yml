@@ -3,8 +3,8 @@ services:
     name: hr-mcp-server
     env: python
     plan: free
-    buildCommand: pip install --no-cache-dir -r requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 3.9.0  # Use older, more stable Python version

@@ -1,11 +1,14 @@
-# render.yaml
 services:
   - type: web
     name: hr-mcp-server
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python src.web_server.py
+    startCommand: python main.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: MCP_SERVER_NAME
+        value: hr-mcp-server
+      - key: MCP_SERVER_VERSION
+        value: 1.0.0

@@ -1,8 +1,7 @@
-# src/test_api.py
 import requests
 import json
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "https://your-render-url.onrender.com"
 
 def test_endpoint(endpoint):
     try:
@@ -20,11 +19,10 @@ def test_endpoint(endpoint):
 def main():
     print("Testing HR MCP Server API...\n")
     
-    # Test all endpoints
     endpoints = [
         "/",
         "/health",
-        "/employees",
+        "/employees", 
         "/employees/EMP001",
         "/employees/search/?department=Engineering",
         "/leaves",

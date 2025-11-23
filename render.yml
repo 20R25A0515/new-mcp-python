@@ -7,4 +7,4 @@ services:
     startCommand: python main.py
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0  # Use older, more stable Python version
+        value: 3.11.0

@@ -1,5 +1,5 @@
 # src/models.py
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional, List
 
 class Employee(BaseModel):
@@ -12,8 +12,8 @@ class Employee(BaseModel):
     salary: Optional[float] = None
     manager: Optional[str] = None
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "EMP001",
                 "name": "John Doe",
@@ -25,6 +25,7 @@ class Employee(BaseModel):
                 "manager": "Jane Smith"
             }
         }
+    )
 
 class LeaveRequest(BaseModel):
     id: str
@@ -36,8 +37,8 @@ class LeaveRequest(BaseModel):
     status: str
     submitted_date: str
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "LEAVE001",
                 "employee_id": "EMP001",
@@ -49,6 +50,7 @@ class LeaveRequest(BaseModel):
                 "submitted_date": "2023-12-15"
             }
         }
+    )
 
 class LeaveRequestCreate(BaseModel):
     employee_id: str
@@ -57,8 +59,8 @@ class LeaveRequestCreate(BaseModel):
     leave_type: str
     reason: str
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "employee_id": "EMP001",
                 "start_date": "2024-03-01",
@@ -67,3 +69,4 @@ class LeaveRequestCreate(BaseModel):
                 "reason": "Family trip"
             }
         }
+    )

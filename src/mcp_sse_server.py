@@ -8,54 +8,9 @@ import uuid
 from datetime import datetime
 import uvicorn
 import os
-import sys
 
-# Fix imports - handle both module and direct execution
-try:
-    # This works when running as module: python -m src.mcp_sse_server
-    from .hr_services import hr_db
-except ImportError:
-    # This works when running directly: python mcp_sse_server.py
-    try:
-        from hr_services import hr_db
-    except ImportError:
-        # Last resort - inline the HR database
-        print("Warning: Could not import hr_services, using inline database")
-        
-        # Simple inline HR database as fallback
-        class Employee:
-            def __init__(self, id, name, email, department, position, hire_date, salary=None, manager=None):
-                self.id = id
-                self.name = name
-                self.email = email
-                self.department = department
-                self.position = position
-                self.hire_date = hire_date
-                self.salary = salary
-                self.manager = manager
-
-        class HRDatabase:
-            def __init__(self):
-                self.employees = {}
-                self._initialize_sample_data()
-            
-            def _initialize_sample_data(self):
-                sample_employees = [
-                    Employee("EMP001", "John Doe", "john.doe@company.com", "Engineering", "Software Engineer", "2022-01-15", 75000.00, "Jane Smith"),
-                    Employee("EMP002", "Jane Smith", "jane.smith@company.com", "Engineering", "Engineering Manager", "2020-03-10", 95000.00, "Bob Wilson"),
-                    Employee("EMP003", "Alice Johnson", "alice.johnson@company.com", "HR", "HR Specialist", "2021-06-20", 65000.00, "Carol Brown")
-                ]
-                
-                for emp in sample_employees:
-                    self.employees[emp.id] = emp
-            
-            def get_employee(self, employee_id):
-                return self.employees.get(employee_id)
-            
-            def get_all_employees(self):
-                return list(self.employees.values())
-        
-        hr_db = HRDatabase()
+# Import your existing modules
+from .hr_services import hr_db
 
 app = FastAPI(title="HR MCP SSE Server")
 
@@ -76,7 +31,7 @@ class MCPSseServer:
         
         async def mcp_event_stream():
             try:
-                # Initialization response
+                # Initialization response (MCP protocol format)
                 init_message = {
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -143,7 +98,7 @@ class MCPSseServer:
                 }
                 yield f"data: {json.dumps(tools_message)}\n\n"
                 
-                # Keep connection alive
+                # Keep connection alive with heartbeats
                 while True:
                     await asyncio.sleep(30)
                     heartbeat = {
@@ -184,6 +139,23 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy", "mcp_ready": True}
+
+# Add a simple tool testing endpoint
+@app.post("/test-tool")
+async def test_tool(request: Request):
+    data = await request.json()
+    tool_name = data.get("name")
+    arguments = data.get("arguments", {})
+    
+    if tool_name == "get_employee_details":
+        employee_id = arguments.get("employee_id")
+        employee = hr_db.get_employee(employee_id)
+        if employee:
+            return {"result": f"Employee: {employee.name}, Dept: {employee.department}"}
+        else:
+            return {"result": f"Employee {employee_id} not found"}
+    
+    return {"result": f"Tool {tool_name} not found"}
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))

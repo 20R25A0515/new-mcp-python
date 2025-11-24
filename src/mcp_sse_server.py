@@ -1,4 +1,3 @@
-# src/mcp_sse_server.py
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,15 +7,11 @@ import uuid
 from datetime import datetime
 import uvicorn
 import os
-import sys
 
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+# Import from same directory
 try:
-    from src.hr_services import hr_db
+    from .hr_services import hr_db
 except ImportError:
-    # Fallback for direct execution
     from hr_services import hr_db
 
 app = FastAPI(title="HR MCP SSE Server")
@@ -44,14 +39,8 @@ class MCPSseServer:
                     "id": 1,
                     "result": {
                         "protocolVersion": "2024-11-05",
-                        "capabilities": {
-                            "tools": {},
-                            "resources": {}
-                        },
-                        "serverInfo": {
-                            "name": "hr-mcp-server",
-                            "version": "1.0.0"
-                        }
+                        "capabilities": {"tools": {}, "resources": {}},
+                        "serverInfo": {"name": "hr-mcp-server", "version": "1.0.0"}
                     }
                 }
                 yield f"data: {json.dumps(init_message)}\n\n"
@@ -67,9 +56,7 @@ class MCPSseServer:
                                 "description": "Get employee details by ID",
                                 "inputSchema": {
                                     "type": "object",
-                                    "properties": {
-                                        "employee_id": {"type": "string"}
-                                    },
+                                    "properties": {"employee_id": {"type": "string"}},
                                     "required": ["employee_id"]
                                 }
                             },

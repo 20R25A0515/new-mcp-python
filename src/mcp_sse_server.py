@@ -1,16 +1,30 @@
 # src/mcp_sse_server.py
 from flask import Flask, Response, request, jsonify
-from flask_cors import CORS
 import json
 import uuid
 from datetime import datetime
 import time
 import os
+import sys
 
-from .hr_services import hr_db
+# Fix imports
+sys.path.append(os.path.dirname(__file__))
+
+try:
+    from hr_services import hr_db
+except ImportError:
+    # Fallback
+    from .hr_services import hr_db
 
 app = Flask(__name__)
-CORS(app)
+
+# Add CORS headers manually
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', '*')
+    response.headers.add('Access-Control-Allow-Methods', '*')
+    return response
 
 class MCPSseServer:
     def handle_mcp_connection(self):
@@ -55,28 +69,6 @@ class MCPSseServer:
                                 "name": "get_all_employees",
                                 "description": "Get all employees",
                                 "inputSchema": {"type": "object", "properties": {}}
-                            },
-                            {
-                                "name": "search_employees", 
-                                "description": "Search employees by department or name",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "department": {"type": "string"},
-                                        "name": {"type": "string"}
-                                    }
-                                }
-                            },
-                            {
-                                "name": "get_employee_leave_requests",
-                                "description": "Get employee leave requests",
-                                "inputSchema": {
-                                    "type": "object", 
-                                    "properties": {
-                                        "employee_id": {"type": "string"}
-                                    },
-                                    "required": ["employee_id"]
-                                }
                             }
                         ]
                     }
@@ -101,9 +93,7 @@ class MCPSseServer:
             mimetype='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': '*'
+                'Connection': 'keep-alive'
             }
         )
 

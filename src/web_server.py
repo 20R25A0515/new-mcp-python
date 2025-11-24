@@ -1,8 +1,15 @@
-# src/web_server.py - Optional separate REST API server
+# src/web_server.py
 from flask import Flask, request, jsonify
 import os
+import sys
 
-from .hr_services import hr_db
+# Fix imports
+sys.path.append(os.path.dirname(__file__))
+
+try:
+    from hr_services import hr_db
+except ImportError:
+    from .hr_services import hr_db
 
 app = Flask(__name__)
 
@@ -25,5 +32,5 @@ def get_employee(employee_id):
     return jsonify(employee)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8001))  # Different port
+    port = int(os.getenv("PORT", 8001))
     app.run(host="0.0.0.0", port=port)

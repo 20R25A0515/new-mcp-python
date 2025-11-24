@@ -1,31 +1,7 @@
 # src/hr_services.py
 from typing import Dict, List, Optional
-from pydantic import BaseModel
-from datetime import datetime, date
-import json
+from .models import Employee, LeaveRequest
 
-# Data Models
-class Employee(BaseModel):
-    id: str
-    name: str
-    email: str
-    department: str
-    position: str
-    hire_date: str
-    salary: Optional[float] = None
-    manager: Optional[str] = None
-
-class LeaveRequest(BaseModel):
-    id: str
-    employee_id: str
-    start_date: str
-    end_date: str
-    leave_type: str
-    reason: str
-    status: str  # pending, approved, rejected
-    submitted_date: str
-
-# Mock Database
 class HRDatabase:
     def __init__(self):
         self.employees: Dict[str, Employee] = {}
@@ -33,7 +9,6 @@ class HRDatabase:
         self._initialize_sample_data()
     
     def _initialize_sample_data(self):
-        # Sample employees
         sample_employees = [
             Employee(
                 id="EMP001",
@@ -70,7 +45,6 @@ class HRDatabase:
         for emp in sample_employees:
             self.employees[emp.id] = emp
         
-        # Sample leave requests
         sample_leaves = [
             LeaveRequest(
                 id="LEAVE001",
@@ -126,5 +100,5 @@ class HRDatabase:
         self.leave_requests[leave_id] = leave
         return leave
 
-# Global databases instances
+# Global instance
 hr_db = HRDatabase()

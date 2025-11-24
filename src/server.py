@@ -1,24 +1,24 @@
-# 1src/server.py
+# src/server.py
 import asyncio
 import os
-from typing import Any, List
-import mcp
+from typing import Any, List, Dict
+from mcp import Server, types
 import mcp.server as mcp_server
-from mcp.server import MCPServer
 from mcp.server.models import InitializationOptions
 import mcp.server.stdio
 from pydantic import AnyUrl
+import json
 
 from .hr_services import hr_db, Employee, LeaveRequest
 
 # Create server instance
-app = MCPServer("hr-mcp-server")
+app = Server("hr-mcp-server")
 
 @app.list_tools()
-async def handle_list_tools() -> List[mcp.Tool]:
+async def handle_list_tools() -> List[types.Tool]:
     """List available HR tools"""
     return [
-        mcp.Tool(
+        types.Tool(
             name="get_employee_details",
             description="Get detailed information about a specific employee by their ID",
             inputSchema={
@@ -32,7 +32,7 @@ async def handle_list_tools() -> List[mcp.Tool]:
                 "required": ["employee_id"]
             }
         ),
-        mcp.Tool(
+        types.Tool(
             name="get_all_employees",
             description="Get list of all employees in the company",
             inputSchema={
@@ -40,7 +40,7 @@ async def handle_list_tools() -> List[mcp.Tool]:
                 "properties": {}
             }
         ),
-        mcp.Tool(
+        types.Tool(
             name="search_employees",
             description="Search employees by department or name",
             inputSchema={
@@ -57,7 +57,7 @@ async def handle_list_tools() -> List[mcp.Tool]:
                 }
             }
         ),
-        mcp.Tool(
+        types.Tool(
             name="get_employee_leave_requests",
             description="Get all leave requests for a specific employee",
             inputSchema={
@@ -71,7 +71,7 @@ async def handle_list_tools() -> List[mcp.Tool]:
                 "required": ["employee_id"]
             }
         ),
-        mcp.Tool(
+        types.Tool(
             name="get_all_leave_requests",
             description="Get all leave requests with optional status filter",
             inputSchema={
@@ -84,7 +84,7 @@ async def handle_list_tools() -> List[mcp.Tool]:
                 }
             }
         ),
-        mcp.Tool(
+        types.Tool(
             name="create_leave_request",
             description="Create a new leave request for an employee",
             inputSchema={
@@ -117,16 +117,16 @@ async def handle_list_tools() -> List[mcp.Tool]:
     ]
 
 @app.call_tool()
-async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
+async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent]:
     """Handle tool execution"""
     try:
         if name == "get_employee_details":
             employee_id = arguments["employee_id"]
             employee = hr_db.get_employee(employee_id)
             if not employee:
-                return [mcp.TextContent(type="text", text=f"Employee with ID {employee_id} not found")]
+                return [types.TextContent(type="text", text=f"Employee with ID {employee_id} not found")]
             
-            return [mcp.TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"Employee Details:\n"
                      f"ID: {employee.id}\n"
@@ -142,13 +142,13 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
         elif name == "get_all_employees":
             employees = hr_db.get_all_employees()
             if not employees:
-                return [mcp.TextContent(type="text", text="No employees found")]
+                return [types.TextContent(type="text", text="No employees found")]
             
             employee_list = "\n\n".join([
                 f"ID: {emp.id}, Name: {emp.name}, Department: {emp.department}, Position: {emp.position}"
                 for emp in employees
             ])
-            return [mcp.TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"Total Employees: {len(employees)}\n\n{employee_list}"
             )]
@@ -163,7 +163,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
                 if department: filters.append(f"department: {department}")
                 if name_filter: filters.append(f"name: {name_filter}")
                 filter_text = " with " + " and ".join(filters) if filters else ""
-                return [mcp.TextContent(type="text", text=f"No employees found{filter_text}")]
+                return [types.TextContent(type="text", text=f"No employees found{filter_text}")]
             
             employee_list = "\n\n".join([
                 f"ID: {emp.id}, Name: {emp.name}, Department: {emp.department}, Position: {emp.position}"
@@ -175,7 +175,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
             if name_filter: filters.append(f"name: {name_filter}")
             filter_text = " with " + " and ".join(filters) if filters else ""
             
-            return [mcp.TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"Found {len(employees)} employees{filter_text}:\n\n{employee_list}"
             )]
@@ -186,10 +186,10 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
             employee = hr_db.get_employee(employee_id)
             
             if not employee:
-                return [mcp.TextContent(type="text", text=f"Employee with ID {employee_id} not found")]
+                return [types.TextContent(type="text", text=f"Employee with ID {employee_id} not found")]
             
             if not leaves:
-                return [mcp.TextContent(
+                return [types.TextContent(
                     type="text",
                     text=f"No leave requests found for employee {employee.name} (ID: {employee_id})"
                 )]
@@ -204,7 +204,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
                 for leave in leaves
             ])
             
-            return [mcp.TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"Leave requests for {employee.name} (ID: {employee_id}):\n\n{leave_list}"
             )]
@@ -215,7 +215,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
             
             if not leaves:
                 status_text = f" with status '{status}'" if status else ""
-                return [mcp.TextContent(type="text", text=f"No leave requests found{status_text}")]
+                return [types.TextContent(type="text", text=f"No leave requests found{status_text}")]
             
             leave_list = "\n\n".join([
                 f"Leave ID: {leave.id}\n"
@@ -228,7 +228,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
             ])
             
             status_text = f" with status '{status}'" if status else ""
-            return [mcp.TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"All leave requests{status_text}:\n\n{leave_list}"
             )]
@@ -241,16 +241,16 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
                 "leave_type": arguments["leave_type"],
                 "reason": arguments["reason"],
                 "status": "pending",
-                "submitted_date": str(date.today())
+                "submitted_date": str(__import__('datetime').date.today())
             }
             
             employee = hr_db.get_employee(leave_data["employee_id"])
             if not employee:
-                return [mcp.TextContent(type="text", text=f"Employee with ID {leave_data['employee_id']} not found")]
+                return [types.TextContent(type="text", text=f"Employee with ID {leave_data['employee_id']} not found")]
             
             leave = hr_db.create_leave_request(leave_data)
             
-            return [mcp.TextContent(
+            return [types.TextContent(
                 type="text",
                 text=f"Leave request created successfully!\n\n"
                      f"Leave ID: {leave.id}\n"
@@ -263,23 +263,23 @@ async def handle_call_tool(name: str, arguments: dict) -> List[mcp.TextContent]:
             )]
         
         else:
-            return [mcp.TextContent(type="text", text=f"Unknown tool: {name}")]
+            return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
     
     except Exception as e:
-        return [mcp.TextContent(type="text", text=f"Error executing tool {name}: {str(e)}")]
+        return [types.TextContent(type="text", text=f"Error executing tool {name}: {str(e)}")]
 
 @app.list_resources()
-async def handle_list_resources() -> List[mcp.Resource]:
+async def handle_list_resources() -> List[types.Resource]:
     """List available resources"""
     return [
-        mcp.Resource(
-            uri=AnyUrl("hr://employees/summary"),
+        types.Resource(
+            uri="hr://employees/summary",
             name="Employees Summary",
             description="Summary of all employees in the organization",
             mimeType="text/plain"
         ),
-        mcp.Resource(
-            uri=AnyUrl("hr://leaves/summary"),
+        types.Resource(
+            uri="hr://leaves/summary",
             name="Leaves Summary", 
             description="Summary of all leave requests",
             mimeType="text/plain"
@@ -287,7 +287,7 @@ async def handle_list_resources() -> List[mcp.Resource]:
     ]
 
 @app.read_resource()
-async def handle_read_resource(uri: AnyUrl) -> str:
+async def handle_read_resource(uri: str) -> str:
     """Handle resource reading"""
     if uri == "hr://employees/summary":
         employees = hr_db.get_all_employees()

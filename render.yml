@@ -4,4 +4,4 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: cd src && python -m mcp_sse_server
+    startCommand: cd src && python mcp_sse_server.py

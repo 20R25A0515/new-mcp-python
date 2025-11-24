@@ -1,37 +1,20 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
-from fastapi.middleware.cors import CORSMiddleware
-import asyncio
+# src/mcp_sse_server.py
+from flask import Flask, Response, request, jsonify
+from flask_cors import CORS
 import json
 import uuid
 from datetime import datetime
-import uvicorn
+import time
 import os
 
-# Import from same directory
-try:
-    from .hr_services import hr_db
-except ImportError:
-    from hr_services import hr_db
+from .hr_services import hr_db
 
-app = FastAPI(title="HR MCP SSE Server")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = Flask(__name__)
+CORS(app)
 
 class MCPSseServer:
-    def __init__(self):
-        self.clients = {}
-    
-    async def handle_mcp_connection(self, request: Request):
-        client_id = str(uuid.uuid4())
-        
-        async def mcp_event_stream():
+    def handle_mcp_connection(self):
+        def generate_events():
             try:
                 # Initialization response
                 init_message = {
@@ -39,8 +22,14 @@ class MCPSseServer:
                     "id": 1,
                     "result": {
                         "protocolVersion": "2024-11-05",
-                        "capabilities": {"tools": {}, "resources": {}},
-                        "serverInfo": {"name": "hr-mcp-server", "version": "1.0.0"}
+                        "capabilities": {
+                            "tools": {},
+                            "resources": {}
+                        },
+                        "serverInfo": {
+                            "name": "hr-mcp-server",
+                            "version": "1.0.0"
+                        }
                     }
                 }
                 yield f"data: {json.dumps(init_message)}\n\n"
@@ -56,7 +45,9 @@ class MCPSseServer:
                                 "description": "Get employee details by ID",
                                 "inputSchema": {
                                     "type": "object",
-                                    "properties": {"employee_id": {"type": "string"}},
+                                    "properties": {
+                                        "employee_id": {"type": "string"}
+                                    },
                                     "required": ["employee_id"]
                                 }
                             },
@@ -64,6 +55,28 @@ class MCPSseServer:
                                 "name": "get_all_employees",
                                 "description": "Get all employees",
                                 "inputSchema": {"type": "object", "properties": {}}
+                            },
+                            {
+                                "name": "search_employees", 
+                                "description": "Search employees by department or name",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "department": {"type": "string"},
+                                        "name": {"type": "string"}
+                                    }
+                                }
+                            },
+                            {
+                                "name": "get_employee_leave_requests",
+                                "description": "Get employee leave requests",
+                                "inputSchema": {
+                                    "type": "object", 
+                                    "properties": {
+                                        "employee_id": {"type": "string"}
+                                    },
+                                    "required": ["employee_id"]
+                                }
                             }
                         ]
                     }
@@ -72,7 +85,7 @@ class MCPSseServer:
                 
                 # Keep connection alive
                 while True:
-                    await asyncio.sleep(30)
+                    time.sleep(30)
                     heartbeat = {
                         "jsonrpc": "2.0",
                         "method": "notifications/heartbeat",
@@ -80,38 +93,106 @@ class MCPSseServer:
                     }
                     yield f"data: {json.dumps(heartbeat)}\n\n"
                     
-            except asyncio.CancelledError:
+            except GeneratorExit:
                 pass
     
-        return StreamingResponse(
-            mcp_event_stream(),
-            media_type="text/event-stream",
+        return Response(
+            generate_events(),
+            mimetype='text/event-stream',
             headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "*"
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*'
             }
         )
 
 mcp_server = MCPSseServer()
 
-@app.post("/mcp")
-async def mcp_sse_endpoint(request: Request):
-    return await mcp_server.handle_mcp_connection(request)
+# MCP SSE Endpoint for Copilot
+@app.route('/mcp', methods=['GET', 'POST'])
+def mcp_sse_endpoint():
+    return mcp_server.handle_mcp_connection()
 
-@app.get("/mcp")
-async def mcp_sse_get_endpoint(request: Request):
-    return await mcp_server.handle_mcp_connection(request)
+# REST API Endpoints
+@app.route('/')
+def root():
+    return jsonify({
+        "message": "HR MCP Server is running",
+        "version": "1.0.0",
+        "endpoints": {
+            "employees": "/employees",
+            "leaves": "/leaves",
+            "health": "/health",
+            "mcp": "/mcp (SSE endpoint for Copilot)"
+        }
+    })
 
-@app.get("/")
-async def root():
-    return {"message": "HR MCP SSE Server", "mcp_endpoint": "/mcp"}
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy", "mcp_ready": True})
 
-@app.get("/health")
-async def health():
-    return {"status": "healthy", "mcp_ready": True}
+@app.route("/employees", methods=["GET"])
+def get_all_employees():
+    return jsonify(hr_db.get_all_employees())
+
+@app.route("/employees/<employee_id>", methods=["GET"])
+def get_employee(employee_id):
+    employee = hr_db.get_employee(employee_id)
+    if not employee:
+        return jsonify({"error": "Employee not found"}), 404
+    return jsonify(employee)
+
+@app.route("/employees/search/", methods=["GET"])
+def search_employees():
+    department = request.args.get('department')
+    name = request.args.get('name')
+    employees = hr_db.search_employees(department, name)
+    return jsonify(employees)
+
+@app.route("/leaves", methods=["GET"])
+def get_all_leaves():
+    status = request.args.get('status')
+    leaves = hr_db.get_all_leaves(status)
+    return jsonify(leaves)
+
+@app.route("/leaves/employee/<employee_id>", methods=["GET"])
+def get_employee_leaves(employee_id):
+    employee = hr_db.get_employee(employee_id)
+    if not employee:
+        return jsonify({"error": "Employee not found"}), 404
+    leaves = hr_db.get_employee_leaves(employee_id)
+    return jsonify(leaves)
+
+@app.route("/leaves", methods=["POST"])
+def create_leave_request():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    required_fields = ['employee_id', 'start_date', 'end_date', 'leave_type', 'reason']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"error": f"Missing required field: {field}"}), 400
+
+    employee = hr_db.get_employee(data['employee_id'])
+    if not employee:
+        return jsonify({"error": "Employee not found"}), 404
+    
+    from datetime import date
+    leave_data = {
+        "employee_id": data['employee_id'],
+        "start_date": data['start_date'],
+        "end_date": data['end_date'],
+        "leave_type": data['leave_type'],
+        "reason": data['reason'],
+        "status": "pending",
+        "submitted_date": str(date.today())
+    }
+    
+    leave = hr_db.create_leave_request(leave_data)
+    return jsonify(leave)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port)

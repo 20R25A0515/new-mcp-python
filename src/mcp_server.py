@@ -89,7 +89,7 @@ def generate_events():
         yield f"data: {json.dumps(heartbeat)}\n\n"
             
 # MCP SSE Endpoint for Copilot
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/mcp', methods=['GET', 'POST'])
 def mcp_endpoint():
     if request.method == 'GET':
         # Handle SSE Handshake and Capabilities

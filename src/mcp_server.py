@@ -55,6 +55,8 @@ def handle_rpc_call(rpc_request):
 
 # --- MCP SSE Endpoint (Handles GET /mcp for Handshake) ---
 
+# --- MCP SSE Endpoint (Handles GET /mcp for Handshake) ---
+
 def generate_events():
     """Generates the initial capability message and heartbeats for the SSE stream."""
     
@@ -65,8 +67,8 @@ def generate_events():
         "result": {
             "protocolVersion": "2024-11-05",
             "capabilities": {
-                # Tools list is derived from the HRTool class
-                "tools": hr_tool.tool_schemas,
+                # This is the line that defines the visible tools
+                "tools": hr_tool.tool_schemas, 
                 "resources": {}
             },
             "serverInfo": {
@@ -76,7 +78,6 @@ def generate_events():
         }
     }
     yield f"data: {json.dumps(init_message)}\n\n"
-    
     # 2. Keep connection alive with heartbeats
     while True:
         time.sleep(30)
@@ -88,7 +89,7 @@ def generate_events():
         yield f"data: {json.dumps(heartbeat)}\n\n"
             
 # MCP SSE Endpoint for Copilot
-@app.route('/mcp', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def mcp_endpoint():
     if request.method == 'GET':
         # Handle SSE Handshake and Capabilities
